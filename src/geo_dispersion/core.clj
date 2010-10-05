@@ -17,3 +17,9 @@
       (:Results (:ResultSet (json/read-json (:body raw-result))))
       (throw (Exception. (str "Geosearch failed for address: " address))))))
 
+; Will be working with CSV files next. See example in example folder. The relevant functions
+; are (parse-csv "1,2,3\n4,5,6\n") and (write-csv [["1" "2" "3"] ["4" "5" "6"]])
+; in clojure-csv.core. Note that the argument to write-csv must be sequence of sequences of strings.
+
+; Also see description of work in doc folder.
+

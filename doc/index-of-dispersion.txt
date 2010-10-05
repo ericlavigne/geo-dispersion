@@ -1,0 +1,70 @@
+How to calculate an index of "dispersion" of personal networks
+
+Introduction: data structure
+The RAW DATA file has the following structure
+
+EGOi, egoiV1, egoiV2 … ALTERj, alterjV1, alterjV2 …
+EGOi, egoiV1, egoiV2 … ALTERk, alterkV1, alterkV2 …
+(n=30)
+EGOm, egomV1, egomV2 .. ALTERn, alternV1, alternV2
+(n=30)
+(…)
+Blank row
+EGOi, ALTERj, ALTERk, 1
+(..)
+(1= there is a link, 2= there isn’t a link, 3=don’t know). 
+
+1. Preparation of the Dataset
+It is necessary to create 4 new variables in the dataset, next to the column 46.1 (“current alter location”):
+Longitude
+Latitude
+Kms
+|Log (kms)|
+
+2. Normalization of the Dataset (ego-alter)
+Variable 46.1 contains the string “City, country” or the number “-1” (the same location than Ego in this case).
+The first operation is debugging all orthographical errors and normalize the names (e.g. eeuu ? usa or vice-versa). 
+The second operation is substituting -1 for the corresponding location in order to have a complete dataset. 
+
+3. Elicitation of the geographical coordinates (ego-alter)
+Select the 100 first rows of the column 46.1     
+Go to http://www.gpsvisualizer.com/geocoder/
+Paste the information in the window. For instance:
+
+cern, france
+lille, france
+stanford, usa
+san diego, usa
+(...)
+
+Press ? start geocoding
+
+The program will produce two outcomes: 1 a map and 2, the latitude and the longitude:
+
+latitude,longitude,name,desc,color
+48.472533,2.325852,"cern, france",-,
+50.637185,3.06281,"lille, france",-,
+37.43137,-122.168924,"stanford, usa",-,
+32.715685,-117.161724,"san diego, usa",
+(…)
+
+Paste de information in the new variable in SPSS and then repeat the operation.
+
+3. Computation of the geographical distances (ego-alter)
+Once the latitude and longitude are established it is possible to compute distances using the excel calculator 
+www.gpswaypoints.co.za/downloads/distcalc.xls
+And then introducing the coordinates in order to get the Kms for each ego-alter pair.
+Each output should be pasted in the corresponding variable (KMs)  of the SPSS dataset. 
+
+4.  Computation of the  alter-alter geographical distances
+At the end of the RAW DATA file, separated with a blank row, there is the alter-alter relationships for every ego. The longitude and the latitude for every alter has been already calculated, so it is necessary to assign that information to every alter and to repeat the step 3, writing the outcome in the KMs variable. 
+
+5.  Computation the index of “dispersion” for every ego |log(kms)|
+Finally the sum of the variable Kms for every ego-alter pair AND every alter-alter pair (for the given ego) will be computed. The absolute value of the log of this number will be written for each ego in the corresponding variable. 
+
+
+
+
+
+
+
