@@ -1,7 +1,8 @@
 (ns geo-dispersion.core
   (:require [clj-http.client :as client])
   (:require [clojure.contrib.json :as json])
-  (:use [clojure-csv.core :only (parse-csv write-csv)]))
+  (:use [clojure-csv.core :only (parse-csv write-csv)])
+  (:use [clojure.contrib.seq :only (positions)]))
 
 ; Raw HTTP response from geosearch for address like
 ; "1600+Pennsylvania+Avenue,+Washington,+DC".
@@ -19,7 +20,8 @@
       (throw (Exception. (str "Geosearch failed for address: " address))))))
 
 (defn manual-select-csv [show-dialog-method]
-  (let [fc (javax.swing.JFileChooser.)
+  (let [fc (doto (javax.swing.JFileChooser.)
+             (.setCurrentDirectory (java.io.File. ".")))
         fcret (show-dialog-method fc)
         ok javax.swing.JFileChooser/APPROVE_OPTION]
     (when (= ok fcret)
@@ -39,9 +41,9 @@
    nil instructions title javax.swing.JOptionPane/PLAIN_MESSAGE nil
    (to-array string-list) (first string-list)))
 
-(defn manual-select-location-field [headings]
+(defn manual-select-location-field [headings for-who]
   (manual-select-string "Select location field"
-                        "Which column contains location information?"
+                        (str "Which column contains location information for " for-who "?")
                         headings))
 
 (defn parse-network-data [text]
@@ -59,13 +61,48 @@
      :alter-pair-head alter-pair-head
      :alter-pair-rows alter-pair-rows}))
 
+(defn location-for-alter-row [alter-row location-index location-chooser]
+  (let [locations (geosearch (nth alter-row location-index))]
+    (cond (empty? locations) nil
+          (empty? (rest locations)) (first locations)
+          :else (location-chooser locations))))
+
+(defn locations-for-alter-rows
+  [alter-head alter-rows location-head
+   {:keys [location-chooser] :or {location-chooser (fn [desc locs] (first locs))}}]
+  (let [location-index (first (positions #(= location-head %) alter-head))]
+    (map (fn [row] (location-for-alter-row row location-index location-chooser))
+         alter-rows)))
+
+(defn show-location [location]
+  (apply str (interpose ", "
+                        (filter #(> (count %) 0)
+                                (map #(% location)
+                                     [:line1 :line2 :line3 :line4])))))
+
+(defn manual-location-chooser [location-description locations]
+  (let [selected (manual-select-string "Choose location"
+                                       (str "To which of these locations does "
+                                            location-description
+                                            " refer?")
+                                       (map show-location locations))]
+    (first (filter #(= selected (show-location %)) locations))))
+
 (defn main []
   (let [in-csv-file (manual-select-csv-to-open)]
     (when in-csv-file
       (let [parsed (parse-network-data (slurp in-csv-file))
             alter-head (:alter-head parsed)
-            location-head (manual-select-location-field alter-head)]
-        (println location-head)))))
+            alter-rows (:alter-rows parsed)
+            ego-location-head (manual-select-location-field alter-head "ego")
+            alter-location-head (manual-select-location-field alter-head "alter")
+            ego-locations (locations-for-alter-rows alter-head alter-rows
+                                                    ego-location-head
+                                                    manual-location-chooser)
+            alter-locations (locations-for-alter-rows alter-head alter-rows
+                                                      alter-location-head
+                                                      manual-location-chooser)]
+        (println (apply str (interpose " | " (map show-location alter-locations))))))))
 
 ; See description of work in doc folder.
 
