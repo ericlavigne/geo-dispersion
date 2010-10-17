@@ -3,4 +3,6 @@ Manifest.txt
 geo-dispersion.jar
 lib
 classes
-*~
+*~*
+*#*
+
