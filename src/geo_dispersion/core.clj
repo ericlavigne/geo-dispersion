@@ -18,5 +18,21 @@
       (:Results (:ResultSet (json/read-json (:body raw-result))))
       (throw (Exception. (str "Geosearch failed for address: " address))))))
 
+(defn manual-select-csv [show-dialog-method]
+  (let [fc (javax.swing.JFileChooser.)
+        fcret (show-dialog-method fc)
+        ok javax.swing.JFileChooser/APPROVE_OPTION]
+    (when (= ok fcret)
+      (.getSelectedFile fc))))
+
+; To allow only .csv extension see
+; http://download.oracle.com/javase/tutorial/uiswing/components/filechooser.html#filters
+
+(defn manual-select-csv-to-open []
+  (manual-select-csv #(.showOpenDialog % nil)))
+
+(defn manual-select-csv-to-save []
+  (manual-select-csv #(.showSaveDialog % nil)))
+  
 ; See description of work in doc folder.
 
