@@ -33,6 +33,18 @@
 
 (defn manual-select-csv-to-save []
   (manual-select-csv #(.showSaveDialog % nil)))
-  
+
+(defn manual-select-string [title instructions string-list]
+  (javax.swing.JOptionPane/showInputDialog
+   nil instructions title javax.swing.JOptionPane/PLAIN_MESSAGE nil
+   (to-array string-list) (first string-list)))
+
+; Example: (manual-select-string "Select location field"
+;                                "Which column contains location information?"
+;                                ["name" "date" "location" "favfood"])
+;            => "location"
+
+
+
 ; See description of work in doc folder.
 
