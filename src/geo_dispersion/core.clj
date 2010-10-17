@@ -39,12 +39,17 @@
    nil instructions title javax.swing.JOptionPane/PLAIN_MESSAGE nil
    (to-array string-list) (first string-list)))
 
-; Example: (manual-select-string "Select location field"
-;                                "Which column contains location information?"
-;                                ["name" "date" "location" "favfood"])
-;            => "location"
+(defn manual-select-location-field [headings]
+  (manual-select-string "Select location field"
+                        "Which column contains location information?"
+                        headings))
 
-
+(defn main []
+  (let [in-csv-file (manual-select-csv-to-open)]
+    (when in-csv-file
+      (let [in-csv-matrix (parse-csv (slurp in-csv-file))
+            headings (first in-csv-matrix)]
+        (println (manual-select-location-field headings))))))
 
 ; See description of work in doc folder.
 

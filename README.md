@@ -4,7 +4,7 @@ Calculate geographic dispersion index for personal networks, as requested by Jos
 
 ## Usage
 
-FIXME: write
+lein run geo-dispersion.core main
 
 ## Installation
 
