@@ -2,12 +2,13 @@
   (:require [clj-http.client :as client])
   (:require [clojure.contrib.json :as json])
   (:use [clojure-csv.core :only (parse-csv write-csv)])
-  (:use [clojure.contrib.seq :only (positions)]))
+  (:use [clojure.contrib.seq :only (positions)])
+  (:use [clojure.contrib.def :only (defn-memo)]))
 
 ; Raw HTTP response from geosearch for address like
 ; "1600+Pennsylvania+Avenue,+Washington,+DC".
 ; :body is in JSON format.
-(defn raw-geosearch [address]
+(defn-memo raw-geosearch [address]
   (client/get "http://where.yahooapis.com/geocode"
 	      {:query-params {"q" address, 
 			      "appid" "pItVa84o", 
@@ -80,7 +81,7 @@
                                 (map #(% location)
                                      [:line1 :line2 :line3 :line4])))))
 
-(defn manual-location-chooser [location-description locations]
+(defn-memo manual-location-chooser [location-description locations]
   (let [selected (manual-select-string "Choose location"
                                        (str "To which of these locations does "
                                             location-description
