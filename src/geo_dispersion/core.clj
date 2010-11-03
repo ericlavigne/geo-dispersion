@@ -89,6 +89,15 @@
                                        (map show-location locations))]
     (first (filter #(= selected (show-location %)) locations))))
 
+(defn distance
+  "Calculate distance(km) between lat1,long1,lat2,long2 (radians) or loc1,loc2 (yahoo api format)"
+  ([lat1 long1 lat2 long2]
+     (let [R 6371] ; km
+       (* R
+          (Math/acos (+ (* (Math/sin lat1) (Math/sin/lat2))
+                        (* (Math/cos lat1) (Math/cos lat2) (Math/cos (- long2 long1))))))))
+  ([loc1 loc2] nil)) ; TODO: Need to convert yahoo loc into lat and long to feed into other arity.
+                        
 (defn main []
   (let [in-csv-file (manual-select-csv-to-open)]
     (when in-csv-file
