@@ -3,7 +3,8 @@
   (:require [clojure.contrib.json :as json])
   (:use [clojure-csv.core :only (parse-csv write-csv)])
   (:use [clojure.contrib.seq :only (positions)])
-  (:use [clojure.contrib.def :only (defn-memo)]))
+  (:use [clojure.contrib.def :only (defn-memo)])
+  (:import (javax.swing JFileChooser JOptionPane)))
 
 ; Raw HTTP response from geosearch for address like
 ; "1600+Pennsylvania+Avenue,+Washington,+DC".
@@ -21,10 +22,10 @@
       (throw (Exception. (str "Geosearch failed for address: " address))))))
 
 (defn manual-select-csv [show-dialog-method]
-  (let [fc (doto (javax.swing.JFileChooser.)
+  (let [fc (doto (JFileChooser.)
              (.setCurrentDirectory (java.io.File. ".")))
         fcret (show-dialog-method fc)
-        ok javax.swing.JFileChooser/APPROVE_OPTION]
+        ok JFileChooser/APPROVE_OPTION]
     (when (= ok fcret)
       (.getSelectedFile fc))))
 
@@ -32,14 +33,16 @@
 ; http://download.oracle.com/javase/tutorial/uiswing/components/filechooser.html#filters
 
 (defn manual-select-csv-to-open []
-  (manual-select-csv #(.showOpenDialog % nil)))
+  (manual-select-csv (fn [^JFileChooser fc]
+                       (.showOpenDialog fc nil))))
 
 (defn manual-select-csv-to-save []
-  (manual-select-csv #(.showSaveDialog % nil)))
+  (manual-select-csv (fn [^JFileChooser fc]
+                       (.showSaveDialog fc nil))))
 
 (defn manual-select-string [title instructions string-list]
-  (javax.swing.JOptionPane/showInputDialog
-   nil instructions title javax.swing.JOptionPane/PLAIN_MESSAGE nil
+  (JOptionPane/showInputDialog
+   nil instructions title JOptionPane/PLAIN_MESSAGE nil
    (to-array string-list) (first string-list)))
 
 (defn manual-select-location-field [headings for-who]
@@ -89,14 +92,18 @@
                                        (map show-location locations))]
     (first (filter #(= selected (show-location %)) locations))))
 
+(defn degrees-to-radians [degrees]
+  (* degrees Math/PI (/ 2.0 360)))
+
 (defn distance
   "Calculate distance(km) between lat1,long1,lat2,long2 (radians) or loc1,loc2 (yahoo api format)"
   ([lat1 long1 lat2 long2]
      (let [R 6371] ; km
        (* R
-          (Math/acos (+ (* (Math/sin lat1) (Math/sin/lat2))
+          (Math/acos (+ (* (Math/sin lat1) (Math/sin lat2))
                         (* (Math/cos lat1) (Math/cos lat2) (Math/cos (- long2 long1))))))))
-  ([loc1 loc2] nil)) ; TODO: Need to convert yahoo loc into lat and long to feed into other arity.
+  ([{lat1 :latitude long1 :longitude} {lat2 :latitude long2 :longitude}] ; Yahoo API format - lat1,lat2,long1,long2 are stringified degrees.
+     (apply distance (map #(degrees-to-radians (Double/parseDouble %)) [lat1 long1 lat2 long2]))))
                         
 (defn main []
   (let [in-csv-file (manual-select-csv-to-open)]
