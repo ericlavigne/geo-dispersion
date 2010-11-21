@@ -32,6 +32,6 @@ Select a filename for the output CSV file (make sure it ends with .csv).
 
 ## License
 
-Copyright (C) 2010 Eric Lavigne
+Copyright (C) 2010 - José Luis Molina, Christopher McCarty, and Eric Lavigne
 
 Distributed under the Eclipse Public License
