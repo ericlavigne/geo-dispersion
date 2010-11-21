@@ -1,0 +1,21 @@
+<launch4jConfig>
+	<headerType>gui</headerType>
+	<outfile>geo-dispersion.exe</outfile>
+	<jar>geo-dispersion-1.0-standalone.jar</jar>
+	<singleInstance>
+		<mutexName>geodispersion</mutexName>
+		<windowTitle>geo-dispersion is already running.</windowTitle>
+	</singleInstance>
+	<jre>
+		<minVersion>1.6.0</minVersion>
+		<initialHeapSize>256</initialHeapSize>
+		<maxHeapSize>1024</maxHeapSize>
+		<maxHeapPercent>70</maxHeapPercent>
+	</jre>
+	<splash>
+		<file>splash.bmp</file>
+		<timeout>60</timeout>
+		<waitForWindow>true</waitForWindow>
+		<timeoutErr>false</timeoutErr>
+	</splash>
+</launch4jConfig>

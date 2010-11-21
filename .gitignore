@@ -1,6 +1,7 @@
 pom-generated.xml
 Manifest.txt
-geo-dispersion.jar
+geo-dispersion*.jar
+geo-dispersion*.exe
 lib
 classes
 *~*

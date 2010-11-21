@@ -4,7 +4,8 @@
   (:use [clojure-csv.core :only (parse-csv write-csv)])
   (:use [clojure.contrib.seq :only (positions)])
   (:use [clojure.contrib.def :only (defn-memo)])
-  (:import (javax.swing JFileChooser JOptionPane)))
+  (:import (javax.swing JFileChooser JOptionPane))
+  (:gen-class))
 
 ; Raw HTTP response from geosearch for address like
 ; "1600+Pennsylvania+Avenue,+Washington,+DC".
@@ -215,3 +216,6 @@
                 (let [all-rows (concat [new-alter-head] new-alter-rows [[] new-ap-head] new-ap-rows)
                       all-rows (map (fn [row] (map str row)) all-rows)] ; Every cell must be a string.
                   (write-csv all-rows))))))))
+
+(defn -main [& args]
+  (main))
