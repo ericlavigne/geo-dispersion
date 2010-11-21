@@ -22,9 +22,10 @@
       (:Results (:ResultSet (json/read-json (:body raw-result))))
       (throw (Exception. (str "Geosearch failed for address: " address))))))
 
-(defn manual-select-csv [show-dialog-method]
+(defn manual-select-csv [show-dialog-method dialog-title]
   (let [fc (doto (JFileChooser.)
-             (.setCurrentDirectory (java.io.File. ".")))
+             (.setCurrentDirectory (java.io.File. "."))
+             (.setDialogTitle dialog-title))
         fcret (show-dialog-method fc)
         ok JFileChooser/APPROVE_OPTION]
     (when (= ok fcret)
@@ -35,11 +36,14 @@
 
 (defn manual-select-csv-to-open []
   (manual-select-csv (fn [^JFileChooser fc]
-                       (.showOpenDialog fc nil))))
+                       (.showOpenDialog fc nil))
+                     "Select a CSV input file."))
 
 (defn manual-select-csv-to-save []
   (manual-select-csv (fn [^JFileChooser fc]
-                       (.showSaveDialog fc nil))))
+                       (.showSaveDialog fc nil))
+                     (str "Create a new file to save the results. "
+                          "Must have a .csv extension.")))
 
 (defn manual-select-string [title instructions string-list]
   (JOptionPane/showInputDialog
@@ -109,7 +113,10 @@
           (Math/acos (+ (* (Math/sin lat1) (Math/sin lat2))
                         (* (Math/cos lat1) (Math/cos lat2) (Math/cos (- long2 long1))))))))
   ([{lat1 :latitude long1 :longitude} {lat2 :latitude long2 :longitude}] ; Yahoo API format - lat1,lat2,long1,long2 are stringified degrees.
-     (apply distance (map #(degrees-to-radians (Double/parseDouble %)) [lat1 long1 lat2 long2]))))
+     (try (apply distance
+                 (map #(degrees-to-radians (Double/parseDouble %))
+                      [lat1 long1 lat2 long2]))
+          (catch Exception _ nil))))
 
 (defn contents-of-manually-selected-column [dialog-title question column-headings table]
   (let [selected-head (manual-select-string dialog-title question column-headings)

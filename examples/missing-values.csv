@@ -1,0 +1,33 @@
+"EgoID","egocat","egohome","egodog","AlterID","altercat","alterdog","alterhome","alterfish"
+1,"no",,"yes",1,"yes","no","1555 Wayne Ave, Dayton, OH 45410","yes"
+1,"no",,"yes",2,"no","no","460 Parkwest Drive, Augusta, GA 30813","yes"
+1,"no",,"yes",3,"yes","yes","Avenue Jean Zuccarelli, 20200 Bastia","no"
+1,"no",,"yes",4,"no","yes","Beira Mar Avenue, 3980 - Mucuripe Beach, Fortaleza, Brazil","yes"
+1,"no",,"yes",5,"no","no","The Aswan Oberoi Hotel and Spa, Elephantine Island, Awan 81111, Egypt","no"
+2,"yes","1730 Llano Street, Santa Fe, NM 87505","no",1,"no","no","Lumbini, Nepal","no"
+2,"yes","1730 Llano Street, Santa Fe, NM 87505","no",2,"yes","yes","Klagenfurt 9020, Austria","no"
+2,"yes","1730 Llano Street, Santa Fe, NM 87505","no",3,"yes","no","Dong-gu, Daegu, South Korea","yes"
+2,"yes","1730 Llano Street, Santa Fe, NM 87505","no",4,"no","yes",,"yes"
+2,"yes","1730 Llano Street, Santa Fe, NM 87505","no",5,"yes","no","Kiev","no"
+,,,,,,,,
+"EgoID","Alter1ID","Alter2ID","know","like",,,,
+1,1,2,0,0,,,,
+1,1,3,1,1,,,,
+1,1,4,0,0,,,,
+1,1,5,0,0,,,,
+1,2,3,1,1,,,,
+1,2,4,0,0,,,,
+1,2,5,1,0,,,,
+1,3,4,1,1,,,,
+1,3,5,0,0,,,,
+1,4,5,1,1,,,,
+2,1,2,1,0,,,,
+2,1,3,0,0,,,,
+2,1,4,0,0,,,,
+2,1,5,0,0,,,,
+2,2,3,1,1,,,,
+2,2,4,0,0,,,,
+2,2,5,0,0,,,,
+2,3,4,1,0,,,,
+2,3,5,0,0,,,,
+2,4,5,1,1,,,,
