@@ -17,7 +17,7 @@
 			      "flags" "J"}}))
 
 (defn geosearch [address]
-  (if (.matches address "[0-9]*") nil ; The researcher may disagree with Yahoo about what location the number "3" refers to.
+  (if (.matches address "[0-9\\-]*") nil ; The researcher may disagree with Yahoo about what location the number "3" refers to.
       (let [raw-result (raw-geosearch address)]
         (if (= 200 (:status raw-result))
           (:Results (:ResultSet (json/read-json (:body raw-result))))
@@ -75,14 +75,14 @@
 (defn location-for-alter-row [alter-row location-index location-chooser location-clarifier]
   (let [location-name (nth alter-row location-index)]
     (if (empty? location-name) nil
-        (let [location-name (if (.matches location-name "[0-9]*")
+        (let [location-name (if (.matches location-name "[0-9\\-]*")
                               (location-clarifier location-name)
                               location-name)]
           (if (empty? location-name) nil
               (let [locations (geosearch location-name)]
                 (cond (empty? locations) nil
                       (empty? (rest locations)) (first locations)
-                      :else (location-chooser locations))))))))
+                      :else (location-chooser location-name locations))))))))
 
 (defn index-of-item-in-seq [item items]
   (first (positions #(= item %) items)))
