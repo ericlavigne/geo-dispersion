@@ -4,8 +4,31 @@
   (:use [clojure-csv.core :only (parse-csv write-csv)])
   (:use [clojure.contrib.seq :only (positions)])
   (:use [clojure.contrib.def :only (defn-memo)])
+  (:use [clojure.contrib.swing-utils :only (do-swing*)])
   (:import (javax.swing JFileChooser JOptionPane))
   (:gen-class))
+
+
+(defn progress-map [f & xs]
+  (let [len (apply min (map count xs))
+        skip (max 1 (int (/ len 100)))
+        progress-bar (javax.swing.JProgressBar. 0 len)
+        panel (javax.swing.JPanel.)
+        _ (do-swing* :now #(doto panel
+                             (.add progress-bar)
+                             (.setOpaque true)))
+        frame (javax.swing.JFrame. "Progress")
+        _ (do-swing* :now #(doto frame
+                             (.setContentPane panel)
+                             (.pack)
+                             (.setVisible true)))
+        results (apply map (fn [i & xs]
+                             (when (= 0 (rem i skip))
+                               (do-swing* :now #(.setValue progress-bar i)))
+                             (apply f xs))
+                       (cons (range len) xs))]
+    (do-swing* :now #(.dispose frame))
+    results))
 
 ; Raw HTTP response from geosearch for address like
 ; "1600+Pennsylvania+Avenue,+Washington,+DC".
@@ -165,94 +188,100 @@
     (if (nil? count-minus-one) 0 (inc count-minus-one))))
 
 (defn main []
-  (let [in-csv-file (manual-select-csv-to-open)]
-    (when in-csv-file
-      (let [parsed (parse-network-data (slurp in-csv-file))
-            alter-head (:alter-head parsed)
-            alter-rows (:alter-rows parsed)
-            ap-head (:alter-pair-head parsed)
-            ap-rows (:alter-pair-rows parsed)
-            ego-ids (contents-of-manually-selected-column "EgoId field (ego-alter section)"
-                                                          "Which field contains the Ego ID number?"
-                                                          alter-head alter-rows)
-            alter-ids (contents-of-manually-selected-column "AlterId field (ego-alter section)"
-                                                            "Which field contains the Alter ID number?"
+  (try
+    (let [in-csv-file (manual-select-csv-to-open)]
+      (when in-csv-file
+        (let [parsed (parse-network-data (slurp in-csv-file))
+              alter-head (:alter-head parsed)
+              alter-rows (:alter-rows parsed)
+              ap-head (:alter-pair-head parsed)
+              ap-rows (:alter-pair-rows parsed)
+              ego-ids (contents-of-manually-selected-column "EgoId field (ego-alter section)"
+                                                            "Which field contains the Ego ID number?"
                                                             alter-head alter-rows)
-            ap-ego-ids (contents-of-manually-selected-column "EgoId field (alter-pair section)"
-                                                             "Which field contains the Ego ID number?"
-                                                             ap-head ap-rows)
-            ap-alter1-ids (contents-of-manually-selected-column "AlterId field 1 (alter-pair section)"
-                                                                "Which field contains the first Alter ID number?"
-                                                                ap-head ap-rows)
-            ap-alter2-ids (contents-of-manually-selected-column "AlterId field 2 (alter-pair section)"
-                                                                "Which field contains the second Alter ID number?"
-                                                                ap-head ap-rows)
-            ego-location-head (manual-select-location-field alter-head "ego")
-            alter-location-head (manual-select-location-field alter-head "alter")
-            _ (println "Finding ego locations")
-            ego-locations (locations-for-alter-rows alter-head alter-rows
-                                                    ego-location-head
-                                                    {:location-chooser manual-location-chooser
-                                                     :location-clarifier (manual-location-clarifier "ego")})
-            _ (println "Some ego locations:" (vec (take 3 ego-locations)))
-            _ (println "Finding alter locations")
-            alter-locations (locations-for-alter-rows alter-head alter-rows
-                                                      alter-location-head
+              alter-ids (contents-of-manually-selected-column "AlterId field (ego-alter section)"
+                                                              "Which field contains the Alter ID number?"
+                                                              alter-head alter-rows)
+              ap-ego-ids (contents-of-manually-selected-column "EgoId field (alter-pair section)"
+                                                               "Which field contains the Ego ID number?"
+                                                               ap-head ap-rows)
+              ap-alter1-ids (contents-of-manually-selected-column "AlterId field 1 (alter-pair section)"
+                                                                  "Which field contains the first Alter ID number?"
+                                                                  ap-head ap-rows)
+              ap-alter2-ids (contents-of-manually-selected-column "AlterId field 2 (alter-pair section)"
+                                                                  "Which field contains the second Alter ID number?"
+                                                                  ap-head ap-rows)
+              ego-location-head (manual-select-location-field alter-head "ego")
+              alter-location-head (manual-select-location-field alter-head "alter")
+              _ (println "Finding ego locations")
+              ego-locations (locations-for-alter-rows alter-head alter-rows
+                                                      ego-location-head
                                                       {:location-chooser manual-location-chooser
-                                                       :location-clarifier (manual-location-clarifier "alter")})
-            _ (println "Some alter locations:" (vec (take 3 alter-locations)))
-            ego-alter-distances (map distance ego-locations alter-locations)
-            _ (println "Some ego-alter distances:" (vec (take 3 ego-alter-distances)))
-            ego-alter-to-alterloc (zipmap (map vector ego-ids alter-ids)
-                                          alter-locations)
-            _ (println "Some alter locs:" (vec (take 3 ego-alter-to-alterloc)))
-            ap-distances (map (fn [egoid alter1id alter2id]
-                                (apply distance
-                                       (map (fn [alterid]
-                                              (ego-alter-to-alterloc [egoid alterid]))
-                                            [alter1id alter2id])))
-                              ap-ego-ids
-                              ap-alter1-ids
-                              ap-alter2-ids)
-            _ (println "Some ap-distances:" (vec (take 3 ap-distances)))
-            ego-to-distances (group-by :ego (map (fn [ego distance] {:ego ego :distance distance})
-                                                 (concat ego-ids ap-ego-ids)
-                                                 (concat ego-alter-distances ap-distances)))
-            _ (println "Distances for an ego:" (first ego-to-distances))
-            distinct-egos (distinct ego-ids)
-            _ (println "Number of distinct egos:" (count distinct-egos))
-            ego-to-metrics (zipmap distinct-egos
-                                   (map (fn [ego]
-                                          (let [distances (filter identity (map :distance (ego-to-distances ego)))]
-                                            {:geo-disp (dispersion-index distances) :geo-alt (dispersion-alt distances)}))
-                                        distinct-egos))
-            _ (println "Some ego metrics:" (vec (take 3 ego-to-metrics)))
-            num-alter-cols (apply max (map count-until-last-nonempty (cons alter-head alter-rows)))
-            num-ap-cols (apply max (map count-until-last-nonempty (cons ap-head ap-rows)))
-            new-alter-head (concat (take num-alter-cols alter-head)
-                                   ["EgoLat" "EgoLon" "AlterLat" "AlterLon" "Distance(km)" "GeoDispersion" "GeoDispersionAlt"])
-            new-alter-rows (map (fn [alter-row ego ego-loc alter-loc distance]
-                                  (concat (take num-alter-cols alter-row)
-                                          [(:latitude ego-loc) (:longitude ego-loc) (:latitude alter-loc) (:longitude alter-loc)
-                                           distance (:geo-disp (ego-to-metrics ego)) (:geo-alt (ego-to-metrics ego))]))
-                                alter-rows
-                                ego-ids
-                                ego-locations
-                                alter-locations
-                                ego-alter-distances)
-            new-ap-head (concat (take num-ap-cols ap-head)
-                                ["Distance"])
-            new-ap-rows (map (fn [ap-row distance]
-                               (concat (take num-ap-cols ap-row)
-                                       [distance]))
-                             ap-rows
-                             ap-distances)
-            out-csv-file (manual-select-csv-to-save)]
-        (when out-csv-file
-          (spit out-csv-file
-                (let [all-rows (concat [new-alter-head] new-alter-rows [[] new-ap-head] new-ap-rows)
-                      all-rows (map (fn [row] (map str row)) all-rows)] ; Every cell must be a string.
-                  (write-csv all-rows))))))))
+                                                       :location-clarifier (manual-location-clarifier "ego")})
+              _ (println "Some ego locations:" (vec (take 3 ego-locations)))
+              _ (println "Finding alter locations")
+              alter-locations (locations-for-alter-rows alter-head alter-rows
+                                                        alter-location-head
+                                                        {:location-chooser manual-location-chooser
+                                                         :location-clarifier (manual-location-clarifier "alter")})
+              _ (println "Some alter locations:" (vec (take 3 alter-locations)))
+              ego-alter-distances (map distance ego-locations alter-locations)
+              _ (println "Some ego-alter distances:" (vec (take 3 ego-alter-distances)))
+              ego-alter-to-alterloc (zipmap (map vector ego-ids alter-ids)
+                                            alter-locations)
+              _ (println "Some alter locs:" (vec (take 3 ego-alter-to-alterloc)))
+              ap-distances (map (fn [egoid alter1id alter2id]
+                                  (apply distance
+                                         (map (fn [alterid]
+                                                (ego-alter-to-alterloc [egoid alterid]))
+                                              [alter1id alter2id])))
+                                ap-ego-ids
+                                ap-alter1-ids
+                                ap-alter2-ids)
+              _ (println "Some ap-distances:" (vec (take 3 ap-distances)))
+              ego-to-distances (group-by :ego (map (fn [ego distance] {:ego ego :distance distance})
+                                                   (concat ego-ids ap-ego-ids)
+                                                   (concat ego-alter-distances ap-distances)))
+              _ (println "Distances for an ego:" (first ego-to-distances))
+              distinct-egos (distinct ego-ids)
+              _ (println "Number of distinct egos:" (count distinct-egos))
+              ego-to-metrics (zipmap distinct-egos
+                                     (map (fn [ego]
+                                            (let [distances (filter identity (map :distance (ego-to-distances ego)))]
+                                              {:geo-disp (dispersion-index distances) :geo-alt (dispersion-alt distances)}))
+                                          distinct-egos))
+              _ (println "Some ego metrics:" (vec (take 3 ego-to-metrics)))
+              num-alter-cols (apply max (map count-until-last-nonempty (cons alter-head alter-rows)))
+              num-ap-cols (apply max (map count-until-last-nonempty (cons ap-head ap-rows)))
+              new-alter-head (concat (take num-alter-cols alter-head)
+                                     ["EgoLat" "EgoLon" "AlterLat" "AlterLon" "Distance(km)" "GeoDispersion" "GeoDispersionAlt"])
+              new-alter-rows (map (fn [alter-row ego ego-loc alter-loc distance]
+                                    (concat (take num-alter-cols alter-row)
+                                            [(:latitude ego-loc) (:longitude ego-loc) (:latitude alter-loc) (:longitude alter-loc)
+                                             distance (:geo-disp (ego-to-metrics ego)) (:geo-alt (ego-to-metrics ego))]))
+                                  alter-rows
+                                  ego-ids
+                                  ego-locations
+                                  alter-locations
+                                  ego-alter-distances)
+              new-ap-head (concat (take num-ap-cols ap-head)
+                                  ["Distance"])
+              new-ap-rows (map (fn [ap-row distance]
+                                 (concat (take num-ap-cols ap-row)
+                                         [distance]))
+                               ap-rows
+                               ap-distances)
+              out-csv-file (manual-select-csv-to-save)]
+          (when out-csv-file
+            (spit out-csv-file
+                  (let [all-rows (concat [new-alter-head] new-alter-rows [[] new-ap-head] new-ap-rows)
+                        all-rows (map (fn [row] (map str row)) all-rows)] ; Every cell must be a string.
+                    (write-csv all-rows)))))))
+    (catch Exception e
+      (let [sw (java.io.StringWriter.)
+            pw (java.io.PrintWriter. sw)]
+        (.printStackTrace e pw)
+        (spit "geo-dispersion-error-log.txt" (.toString sw))))))
 
 (defn -main [& args]
   (main))
