@@ -5,9 +5,18 @@
   (:use [clojure.contrib.seq :only (positions)])
   (:use [clojure.contrib.def :only (defn-memo)])
   (:use [clojure.contrib.swing-utils :only (do-swing*)])
+  (:use [clojure.java.io :as io])
+  (:import (au.com.bytecode.opencsv CSVReader))
   (:import (javax.swing JFileChooser JOptionPane))
   (:gen-class))
 
+(defn read-csv [path]
+  (let [buffer (CSVReader. (io/reader path))]
+    (lazy-seq
+     (loop [res []]
+       (if-let [nxt (.readNext buffer)]
+         (recur (conj res (seq nxt)))
+         res)))))
 
 (defn progress-map [f & xs]
   (let [len (apply min (map count xs))
@@ -81,7 +90,7 @@
                         headings))
 
 (defn parse-network-data [text]
-  (let [in-matrix (parse-csv text)
+  (let [in-matrix (read-csv text)
         empty-row #(or (empty? %) (every? empty? %))
         non-empty-row (complement empty-row)
         [[alter-head & alter-rows] after-alter-rows] (split-with non-empty-row in-matrix)
@@ -191,7 +200,7 @@
   (try
     (let [in-csv-file (manual-select-csv-to-open)]
       (when in-csv-file
-        (let [parsed (parse-network-data (slurp in-csv-file))
+        (let [parsed (parse-network-data in-csv-file)
               alter-head (:alter-head parsed)
               alter-rows (:alter-rows parsed)
               ap-head (:alter-pair-head parsed)
