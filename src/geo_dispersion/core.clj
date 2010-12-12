@@ -8,6 +8,7 @@
   (:use [clojure.java.io :as io])
   (:import (au.com.bytecode.opencsv CSVReader))
   (:import (javax.swing JFileChooser JOptionPane))
+  (:import (java.awt Dimension))
   (:gen-class))
 
 (defn read-csv [path]
@@ -18,24 +19,31 @@
          (recur (conj res (seq nxt)))
          res)))))
 
-(defn progress-map [f & xs]
+(defn progress-map
+  "Like map, but shows a progress bar.
+   Example: (progress-map \"Cleaning dishes\"
+                          (fn [dish] (Thread/sleep 500) dish)
+                          (range 100))"
+  [label f & xs]
   (let [len (apply min (map count xs))
         skip (max 1 (int (/ len 100)))
         progress-bar (javax.swing.JProgressBar. 0 len)
+        _ (.setPreferredSize progress-bar (Dimension. 300 50))
         panel (javax.swing.JPanel.)
         _ (do-swing* :now #(doto panel
                              (.add progress-bar)
                              (.setOpaque true)))
-        frame (javax.swing.JFrame. "Progress")
+        frame (javax.swing.JFrame. label)
         _ (do-swing* :now #(doto frame
                              (.setContentPane panel)
                              (.pack)
                              (.setVisible true)))
-        results (apply map (fn [i & xs]
-                             (when (= 0 (rem i skip))
-                               (do-swing* :now #(.setValue progress-bar i)))
-                             (apply f xs))
-                       (cons (range len) xs))]
+        results (doall (apply map
+                              (fn [i & xs]
+                                (when (= 0 (rem i skip))
+                                  (do-swing* :now #(.setValue progress-bar i)))
+                                (apply f xs))
+                              (cons (range len) xs)))]
     (do-swing* :now #(.dispose frame))
     results))
 
@@ -124,8 +132,9 @@
         location-clarifier (if (:location-clarifier key-args) (:location-clarifier key-args) (fn [loc-code] nil))
         location-index (index-of-item-in-seq location-head alter-head)
         _ (println "Used " location-head " to determine that index was " location-index)]
-    (map (fn [row] (location-for-alter-row row location-index location-chooser location-clarifier))
-         alter-rows)))
+    (progress-map (str "Analyzing " location-head " column")
+                  (fn [row] (location-for-alter-row row location-index location-chooser location-clarifier))
+                  alter-rows)))
 
 (defn show-location [location]
   (apply str (interpose ", "
@@ -222,44 +231,37 @@
                                                                   ap-head ap-rows)
               ego-location-head (manual-select-location-field alter-head "ego")
               alter-location-head (manual-select-location-field alter-head "alter")
-              _ (println "Finding ego locations")
               ego-locations (locations-for-alter-rows alter-head alter-rows
                                                       ego-location-head
                                                       {:location-chooser manual-location-chooser
                                                        :location-clarifier (manual-location-clarifier "ego")})
-              _ (println "Some ego locations:" (vec (take 3 ego-locations)))
-              _ (println "Finding alter locations")
               alter-locations (locations-for-alter-rows alter-head alter-rows
                                                         alter-location-head
                                                         {:location-chooser manual-location-chooser
                                                          :location-clarifier (manual-location-clarifier "alter")})
-              _ (println "Some alter locations:" (vec (take 3 alter-locations)))
-              ego-alter-distances (map distance ego-locations alter-locations)
-              _ (println "Some ego-alter distances:" (vec (take 3 ego-alter-distances)))
+              ego-alter-distances (progress-map "ego-alter distances"
+                                                distance ego-locations alter-locations)
               ego-alter-to-alterloc (zipmap (map vector ego-ids alter-ids)
                                             alter-locations)
-              _ (println "Some alter locs:" (vec (take 3 ego-alter-to-alterloc)))
-              ap-distances (map (fn [egoid alter1id alter2id]
-                                  (apply distance
-                                         (map (fn [alterid]
-                                                (ego-alter-to-alterloc [egoid alterid]))
-                                              [alter1id alter2id])))
-                                ap-ego-ids
-                                ap-alter1-ids
-                                ap-alter2-ids)
-              _ (println "Some ap-distances:" (vec (take 3 ap-distances)))
+              ap-distances (progress-map "alter pair distances"
+                                         (fn [egoid alter1id alter2id]
+                                           (apply distance
+                                                  (map (fn [alterid]
+                                                         (ego-alter-to-alterloc [egoid alterid]))
+                                                       [alter1id alter2id])))
+                                         ap-ego-ids
+                                         ap-alter1-ids
+                                         ap-alter2-ids)
               ego-to-distances (group-by :ego (map (fn [ego distance] {:ego ego :distance distance})
                                                    (concat ego-ids ap-ego-ids)
                                                    (concat ego-alter-distances ap-distances)))
-              _ (println "Distances for an ego:" (first ego-to-distances))
               distinct-egos (distinct ego-ids)
-              _ (println "Number of distinct egos:" (count distinct-egos))
               ego-to-metrics (zipmap distinct-egos
-                                     (map (fn [ego]
-                                            (let [distances (filter identity (map :distance (ego-to-distances ego)))]
-                                              {:geo-disp (dispersion-index distances) :geo-alt (dispersion-alt distances)}))
-                                          distinct-egos))
-              _ (println "Some ego metrics:" (vec (take 3 ego-to-metrics)))
+                                     (progress-map "geo-dispersion indices"
+                                                   (fn [ego]
+                                                     (let [distances (filter identity (map :distance (ego-to-distances ego)))]
+                                                       {:geo-disp (dispersion-index distances) :geo-alt (dispersion-alt distances)}))
+                                                   distinct-egos))
               num-alter-cols (apply max (map count-until-last-nonempty (cons alter-head alter-rows)))
               num-ap-cols (apply max (map count-until-last-nonempty (cons ap-head ap-rows)))
               new-alter-head (concat (take num-alter-cols alter-head)
