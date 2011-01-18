@@ -6,6 +6,7 @@
 		 [org.clojure/clojure-contrib "1.2.0"]
 		 [clj-http "0.1.1"]
                  [clojure-csv "1.2.0"]
+		 [com.h2database/h2 "1.2.147"]
 		 [compojure "0.5.1"]
 		 [hiccup "0.3.0"]
                  [opencsv-clj "1.1.0"]
