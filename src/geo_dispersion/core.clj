@@ -1,11 +1,10 @@
 (ns geo-dispersion.core
-  (:require [clj-http.client :as client])
-  (:require [clojure.contrib.json :as json])
   (:use [clojure-csv.core :only (parse-csv write-csv)])
   (:use [clojure.contrib.seq :only (positions)])
   (:use [clojure.contrib.def :only (defn-memo)])
   (:use [clojure.contrib.swing-utils :only (do-swing*)])
   (:use [clojure.java.io :as io])
+  (:use [geo-dispersion.location :as location])
   (:import (au.com.bytecode.opencsv CSVReader))
   (:import (javax.swing JFileChooser JOptionPane))
   (:import (java.awt Dimension))
@@ -46,22 +45,6 @@
                               (cons (range len) xs)))]
     (do-swing* :now #(.dispose frame))
     results))
-
-; Raw HTTP response from geosearch for address like
-; "1600+Pennsylvania+Avenue,+Washington,+DC".
-; :body is in JSON format.
-(defn-memo raw-geosearch [address]
-  (client/get "http://where.yahooapis.com/geocode"
-	      {:query-params {"q" address, 
-			      "appid" "pItVa84o", 
-			      "flags" "J"}}))
-
-(defn geosearch [address]
-  (if (.matches address "[0-9\\-]*") nil ; The researcher may disagree with Yahoo about what location the number "3" refers to.
-      (let [raw-result (raw-geosearch address)]
-        (if (= 200 (:status raw-result))
-          (:Results (:ResultSet (json/read-json (:body raw-result))))
-          (throw (Exception. (str "Geosearch failed for address: " address)))))))
 
 (defn manual-select-csv [show-dialog-method dialog-title]
   (let [fc (doto (JFileChooser.)
@@ -119,7 +102,7 @@
                               (location-clarifier location-name)
                               location-name)]
           (if (empty? location-name) nil
-              (let [locations (geosearch location-name)]
+              (let [locations (location/geosearch location-name)]
                 (cond (empty? locations) nil
                       (empty? (rest locations)) (first locations)
                       :else (location-chooser location-name locations))))))))
@@ -136,19 +119,13 @@
                   (fn [row] (location-for-alter-row row location-index location-chooser location-clarifier))
                   alter-rows)))
 
-(defn show-location [location]
-  (apply str (interpose ", "
-                        (filter #(> (count %) 0)
-                                (map #(% location)
-                                     [:line1 :line2 :line3 :line4])))))
-
 (defn-memo manual-location-chooser [location-description locations]
   (let [selected (manual-select-string "Choose location"
                                        (str "To which of these locations does "
                                             location-description
                                             " refer?")
-                                       (map show-location locations))]
-    (first (filter #(= selected (show-location %)) locations))))
+                                       (map location/show locations))]
+    (first (filter #(= selected (location/show %)) locations))))
 
 (defn manual-location-clarifier [for-who]
   (memoize (fn [location-code]
@@ -158,24 +135,6 @@
                                         ". Please enter a new description of the location and press OK. "
                                         "Or, to skip this location, press CANCEL.")
                                    nil))))
-
-(defn degrees-to-radians
-  "radians = degrees * 2pi / 360"
-  [degrees]
-  (* degrees Math/PI (/ 2.0 360)))
-
-(defn distance
-  "Calculate distance(km) between lat1,long1,lat2,long2 (radians) or loc1,loc2 (yahoo api format)"
-  ([lat1 long1 lat2 long2]
-     (let [R 6371] ; km
-       (* R
-          (Math/acos (+ (* (Math/sin lat1) (Math/sin lat2))
-                        (* (Math/cos lat1) (Math/cos lat2) (Math/cos (- long2 long1))))))))
-  ([{lat1 :latitude long1 :longitude} {lat2 :latitude long2 :longitude}] ; Yahoo API format - lat1,lat2,long1,long2 are stringified degrees.
-     (try (apply distance
-                 (map #(degrees-to-radians (Double/parseDouble %))
-                      [lat1 long1 lat2 long2]))
-          (catch Exception _ nil))))
 
 (defn contents-of-manually-selected-column [dialog-title question column-headings table]
   (let [selected-head (manual-select-string dialog-title question column-headings)
