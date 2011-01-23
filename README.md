@@ -30,6 +30,10 @@ Select a filename for the output CSV file (make sure it ends with .csv).
 
       Shortcut when you don't need executable: lein run geo-dispersion.core main
 
+      Launch web version (incomplete): lein ring server
+
+      Create war for web version (incomplete): lein ring uberwar
+
 ## License
 
 Copyright (C) 2010 - José Luis Molina, Christopher McCarty, and Eric Lavigne
