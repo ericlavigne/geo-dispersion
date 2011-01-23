@@ -12,4 +12,5 @@
 	   [:textarea {:name "text" :rows "20" :cols "70"} text]
 	   [:br]
 	   [:input {:type "Submit" :value "Submit"}]
-	   [:p text]]]))
+	   [:p text]]
+	  [:p (link-to "/jquery-ui-example.html" "jQuery UI example")]]))

@@ -4,14 +4,30 @@
   (:require [compojure.route :as route]
 	    [geo-dispersion.views :as views]))
 
+(defn apply-utf8 [content]
+  (content-type content "text/html; charset=UTF-8"))
+
 (defn wrap-utf8 [app]
   (fn [req]
-    (content-type (app req) "text/html; charset=UTF-8")))
+    (let [resp (app req)]
+      (if (or (nil? resp) (= :next req))
+	resp
+	(let [headers (:headers resp)
+	      resp-type (if headers (headers "Content-Type") nil)]
+	  (if (or (nil? resp-type)
+		  (.contains resp-type "text"))
+	    (content-type resp "text/html; charset=UTF-8")
+	    resp))))))
+
+(def text-routes
+     (-> (routes
+	  (GET "/" [] (views/index "\u00e9"))
+	  (POST "/" [text] (views/index text))
+	  (ANY "*" [] :next))
+	 (wrap-utf8)))
 
 (defroutes main
-  (GET "/" [] (views/index "\u00e9"))
-  (POST "/" [text] (views/index text))
+  text-routes
+  (route/resources "/")
   (route/not-found "<h1>Page not found</h1>"))
 
-(def app (-> #'main
-	     (wrap-utf8)))

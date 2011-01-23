@@ -13,5 +13,6 @@
 		 [ring/ring-devel "0.3.0"]
 		 [ring/ring-jetty-adapter "0.3.0"]
 		 [ring/ring-servlet "0.3.0"]]
-  :dev-dependencies [[lein-run "1.0.0"]]
+  :dev-dependencies [[lein-ring "0.2.4"]]
+  :ring {:handler geo-dispersion.routes/main}
   :jvm-opts ["-Xmx1g"])

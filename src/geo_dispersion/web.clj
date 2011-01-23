@@ -4,4 +4,4 @@
 
 ; lein run geo-dispersion.web main
 (defn main []
-  (run-jetty routes/app {:port 8080}))
+  (run-jetty routes/main {:port 8080}))
