@@ -1,8 +1,9 @@
 (ns geo-dispersion.routes
   (:use compojure.core
-	ring.util.response)
+        ring.util.response
+        sandbar.stateful-session)
   (:require [compojure.route :as route]
-	    [geo-dispersion.views :as views]))
+            [geo-dispersion.views :as views]))
 
 (defn apply-utf8 [content]
   (content-type content "text/html; charset=UTF-8"))
@@ -22,13 +23,17 @@
 (def text-routes
      (-> (routes
           (GET "/" [] (views/index))
+          (GET "/new-account" [] (views/layout {} "New account"))
+          (GET "/login" [] (views/layout {} "Login"))
 	  (GET "/encoding-test" [] (views/encoding-test "\u00e9"))
 	  (POST "/encoding-test" [text] (views/encoding-test text))
 	  (ANY "*" [] :next))
 	 (wrap-utf8)))
 
-(defroutes main
+(defroutes combined
   text-routes
   (route/resources "/")
   (route/not-found "<h1>Page not found</h1>"))
 
+(def main (-> combined
+              wrap-stateful-session))
