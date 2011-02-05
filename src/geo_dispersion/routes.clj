@@ -21,8 +21,9 @@
 
 (def text-routes
      (-> (routes
-	  (GET "/" [] (views/index "\u00e9"))
-	  (POST "/" [text] (views/index text))
+          (GET "/" [] (views/index))
+	  (GET "/encoding-test" [] (views/encoding-test "\u00e9"))
+	  (POST "/encoding-test" [text] (views/encoding-test text))
 	  (ANY "*" [] :next))
 	 (wrap-utf8)))
 
