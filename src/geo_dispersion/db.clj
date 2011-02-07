@@ -16,6 +16,8 @@
 			 vs (map res ks)]
 		     (zipmap (map process-result ks)
 			     (map process-result vs)))
+        (string? res) res
+        (nil? res) res
 	:else-is-clob (declob res)))
 
 (defn query [sql-statement & sql-params]
@@ -27,3 +29,18 @@
   (with-connection db
     (transaction
      (apply query sql-statement sql-params))))
+
+(def migrations [])
+
+(defn apply-migrations [db]
+  (with-connection db
+    (transaction
+     (when (empty? (query "show tables"))
+       (create-table "migration" ["name" "varchar(100)"]))
+     (let [already-applied (set (query "select name from migration"))]
+       (doseq [migration migrations]
+         (when-not (already-applied (:name migration))
+           ((:update migration))
+           (insert-rows "migration" [(:name migration)])))))))
+
+           
