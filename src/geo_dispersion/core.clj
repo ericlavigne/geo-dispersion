@@ -118,7 +118,9 @@
                            :else choice)))))))
 
 (defn location-for-alter-row [alter-row location-index location-chooser location-clarifier]
-  (convert-description-to-location (nth alter-row location-index)))
+  (convert-description-to-location (nth alter-row location-index)
+                                   location-chooser
+                                   location-clarifier))
 
 (defn index-of-item-in-seq [item items]
   (first (positions #(= item %) items)))
