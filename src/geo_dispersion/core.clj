@@ -95,17 +95,30 @@
      :alter-pair-head alter-pair-head
      :alter-pair-rows alter-pair-rows}))
 
+(defn convert-description-to-location
+  ([description location-chooser location-clarifier]
+     (convert-description-to-location description location-chooser location-clarifier 10))
+  ([description location-chooser location-clarifier tries-remaining]
+     (cond (or (< tries-remaining 0) (empty? description)) nil
+           (.matches description "[0-9\\-]*") (recur (location-clarifier description)
+                                                     location-chooser location-clarifier
+                                                     (dec tries-remaining))
+           :else
+           (let [geo-results (location/geosearch description)]
+             (cond (empty? geo-results) (recur (location-clarifier description)
+                                               location-chooser location-clarifier
+                                               (dec tries-remaining))
+                   (= 1 (count geo-results)) (first geo-results)
+                   :else
+                   (let [choice (location-chooser description geo-results)]
+                     (cond (or (not choice) (= "skip this location" choice)) nil
+                           (= "none of the above"  choice) (recur (location-clarifier description)
+                                                                  location-chooser location-clarifier
+                                                                  (dec tries-remaining))
+                           :else choice)))))))
+
 (defn location-for-alter-row [alter-row location-index location-chooser location-clarifier]
-  (let [location-name (nth alter-row location-index)]
-    (if (empty? location-name) nil
-        (let [location-name (if (.matches location-name "[0-9\\-]*")
-                              (location-clarifier location-name)
-                              location-name)]
-          (if (empty? location-name) nil
-              (let [locations (location/geosearch location-name)]
-                (cond (empty? locations) nil
-                      (empty? (rest locations)) (first locations)
-                      :else (location-chooser location-name locations))))))))
+  (convert-description-to-location (nth alter-row location-index)))
 
 (defn index-of-item-in-seq [item items]
   (first (positions #(= item %) items)))
@@ -124,8 +137,10 @@
                                        (str "To which of these locations does "
                                             location-description
                                             " refer?")
-                                       (map location/show locations))]
-    (first (filter #(= selected (location/show %)) locations))))
+                                       (concat (map location/show locations)
+                                               ["none of the above" "skip this location"]))]
+    (if (#{"none of the above" "skip this location"} selected) selected
+        (first (filter #(= selected (location/show %)) locations)))))
 
 (defn manual-location-clarifier [for-who]
   (memoize (fn [location-code]
