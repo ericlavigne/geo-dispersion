@@ -3,7 +3,7 @@
   (:use [clojure.test])
   (:use [clojure-csv.core :only (parse-csv write-csv)]))
 
-(def example-text (slurp "examples/small-disperse.csv"))
+(def example-file "examples/small-disperse.csv")
 (def example-alter-head
      ["EgoID" "egocat" "egohome" "egodog"
       "AlterID" "altercat" "alterdog" "alterhome" "alterfish"])
@@ -12,7 +12,7 @@
      ["EgoID" "Alter1ID" "Alter2ID" "know" "like"])
 
 (deftest csv-dependency
-  (let [matrix (parse-csv example-text)]
+  (let [matrix (parse-csv (slurp example-file))]
     (is (= example-alter-head (first matrix))
         "Heading matches expectation.")
     (is (every? empty? (nth matrix 11))
@@ -21,7 +21,7 @@
         "parse-csv and write-csv are inverses, except for a newline at the end.")))
 
 (deftest test-parse-network-data
-  (let [parsed (parse-network-data example-text)]
+  (let [parsed (parse-network-data example-file)]
     (is (= example-alter-head (:alter-head parsed))
         "Alter heading matches expectation.")
     (is (= example-alter-pair-head (:alter-pair-head parsed))

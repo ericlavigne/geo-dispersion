@@ -80,8 +80,8 @@
                         (str "Which column contains location information for " for-who "?")
                         headings))
 
-(defn parse-network-data [text]
-  (let [in-matrix (read-csv text)
+(defn parse-network-data [path]
+  (let [in-matrix (read-csv path)
         empty-row #(or (empty? %) (every? empty? %))
         non-empty-row (complement empty-row)
         [[alter-head & alter-rows] after-alter-rows] (split-with non-empty-row in-matrix)
